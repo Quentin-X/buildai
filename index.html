@@ -158,13 +158,12 @@
             jsonOutput.textContent = "// Generating your build...";
 
             const userExtra = userPromptInput.value.trim();
-            const promptText = `make a json of a bloxd build with block names and positions. Group touching or continuous blocks into cuboids using pos1 and pos2 (like {"name": "Dirt", "pos1": [0, 0, 0], "pos2": [0, 10, 0]}) and list multiple positions in an array for discrete blocks of the same type (like {"name": "Dirt", "pos": [[0, 0, 0], [0, 1, 0]]}). Don't repeat separate block entries for the same block type. Note: Cobblestone is Messy Stone, wood planks use wood types like Maple Wood Planks (available woods with minecraft equivalent: maple (oak), aspen (birch), mango (bamboo), jungle, spectral (warped), plum (acacia), cherry, pear (grey with a purple tint), pine (spruce), cedar (dark oak)). Note that the "[wood type] Wood" prefix is only for planks, and for anything else it is normal, like "Maple Door". The top of doors has "_" prefix and " Top" suffix. Redstone does not exist. Concrete, wool, glass, chalk, neon can be colored like "Red Neon". Normal glass is just Glass. Chalk is concrete but paler, neon glows. ${userExtra ? `User details: ${userExtra}.` : ''} Return raw valid JSON only, without markdown formatting.`;
 
             try {
                 const response = await fetch(WORKER_URL, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ prompt: promptText })
+                    body: JSON.stringify(userExtra)
                 });
 
                 const data = await response.json();
