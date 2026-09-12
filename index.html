@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bloxd.io House Generator</title>
+    <link rel="stylesheet" href="https://sitetransform.github.io/sitetransform.css/dist/sitetransform.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            text-transform: none;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 25px;
+        }
+
+        pre {
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 350px;
+            overflow-y: auto;
+        }
+
+        .section-header h3 {
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Bloxd.io AI Build Generator</h1>
+
+    <p>A Bloxd.io AI tool to build, well, builds.</p>
+
+    <div class="input-group">
+        <label for="userPrompt">Prompt (maximum 100 characters):</label>
+        <input type="text" id="userPrompt" maxlength="100"
+            placeholder="e.g. 2 floors with plum wood planks and lighting">
+    </div>
+
+    <div class="button-group">
+        <button id="generateBtn">Generate build!</button>
+    </div>
+
+    <div class="section-header">
+        <h3>Bloxd.io Code Output (paste in Code Block):</h3>
+        <button id="copyCodeBtn">Copy Code</button>
+    </div>
+    <pre id="apiOutput">// Bloxd.io code will appear here!</pre>
+
+    <div class="section-header">
+        <h3>Original JSON Output (for debugging):</h3>
+        <button id="copyJsonBtn">Copy JSON</button>
+    </div>
+    <pre id="jsonOutput">// Raw JSON will appear here for debugging!</pre>
+
+    <script>
+        const WORKER_URL = "https://white-fire-db08.quentavers-universe.workers.dev/";
+
+        const generateBtn = document.getElementById('generateBtn');
+        const copyCodeBtn = document.getElementById('copyCodeBtn');
+        const copyJsonBtn = document.getElementById('copyJsonBtn');
+
+        const apiOutput = document.getElementById('apiOutput');
+        const jsonOutput = document.getElementById('jsonOutput');
+        const userPromptInput = document.getElementById('userPrompt');
+
+        // read da ai
+        function parseJsonToBloxdApi(rawJson) {
+            if (!rawJson || typeof rawJson !== 'string') {
+                apiOutput.textContent = "// Error: Received empty response from AI.";
+                jsonOutput.textContent = "// Error: Received empty response from AI.";
+                return;
+            }
+
+            try {
+                let cleanJson = rawJson.trim();
+                cleanJson = cleanJson.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '');
+
+                const blocksData = JSON.parse(cleanJson);
+                jsonOutput.textContent = JSON.stringify(blocksData, null, 2);
+
+                if (!Array.isArray(blocksData)) {
+                    throw new Error("Expected JSON array of blocks.");
+                }
+
+                let codeLines = [];
+                codeLines.push(`// Paste me in a Code Block and run me!\n`);
+
+                blocksData.forEach((entry) => {
+                    const blockName = entry.name;
+
+                    // read da ai (louder)
+                    if (entry.pos1 && entry.pos2) {
+                        const p1 = `[thisPos[0] + ${entry.pos1[0]}, thisPos[1] + ${entry.pos1[1]}, thisPos[2] + ${entry.pos1[2]}]`;
+                        const p2 = `[thisPos[0] + ${entry.pos2[0]}, thisPos[1] + ${entry.pos2[1]}, thisPos[2] + ${entry.pos2[2]}]`;
+                        codeLines.push(`api.setBlockRect(${p1}, ${p2}, "${blockName}");`);
+                    }
+
+                    else if (Array.isArray(entry.cuboids)) {
+                        entry.cuboids.forEach(c => {
+                            if (c.pos1 && c.pos2) {
+                                const p1 = `[thisPos[0] + ${c.pos1[0]}, thisPos[1] + ${c.pos1[1]}, thisPos[2] + ${c.pos1[2]}]`;
+                                const p2 = `[thisPos[0] + ${c.pos2[0]}, thisPos[1] + ${c.pos2[1]}, thisPos[2] + ${c.pos2[2]}]`;
+                                codeLines.push(`api.setBlockRect(${p1}, ${p2}, "${blockName}");`);
+                            }
+                        });
+                    }
+
+                    else if (Array.isArray(entry.pos)) {
+                        entry.pos.forEach(pos => {
+                            const x = `thisPos[0] + ${pos[0]}`;
+                            const y = `thisPos[1] + ${pos[1]}`;
+                            const z = `thisPos[2] + ${pos[2]}`;
+                            codeLines.push(`api.setBlock(${x}, ${y}, ${z}, "${blockName}");`);
+                        });
+                    }
+                });
+
+                apiOutput.textContent = codeLines.join('\n');
+            } catch (err) {
+                apiOutput.textContent = "// Error parsing JSON, limit might be reached, try again later: " + err.message + "\n\n--- Raw Output ---\n" + rawJson;
+                jsonOutput.textContent = rawJson;
+            }
+        }
+
+        // send prompt to sla- i mean worker for the build to be generated (so u can't steal hehehe)
+        generateBtn.addEventListener('click', async () => {
+            generateBtn.disabled = true;
+            apiOutput.textContent = "// Generating your build...";
+            jsonOutput.textContent = "// Generating your build...";
+
+            const userExtra = userPromptInput.value.trim();
+            const promptText = `make a json of a bloxd build with block names and positions. Group touching or continuous blocks into cuboids using pos1 and pos2 (like {"name": "Dirt", "pos1": [0, 0, 0], "pos2": [0, 10, 0]}) and list multiple positions in an array for discrete blocks of the same type (like {"name": "Dirt", "pos": [[0, 0, 0], [0, 1, 0]]}). Don't repeat separate block entries for the same block type. Note: Cobblestone is Messy Stone, wood planks use wood types like Maple Wood Planks (available woods with minecraft equivalent: maple (oak), aspen (birch), mango (bamboo), jungle, spectral (warped), plum (acacia), cherry, pear (grey with a purple tint), pine (spruce), cedar (dark oak)). Note that the "[wood type] Wood" prefix is only for planks, and for anything else it is normal, like "Maple Door". The top of doors has "_" prefix and " Top" suffix. Redstone does not exist. Concrete, wool, glass, chalk, neon can be colored like "Red Neon". Normal glass is just Glass. Chalk is concrete but paler, neon glows. ${userExtra ? `User details: ${userExtra}.` : ''} Return raw valid JSON only, without markdown formatting.`;
+
+            try {
+                const response = await fetch(WORKER_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ prompt: promptText })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    apiOutput.textContent = "// Error: " + data.error;
+                    jsonOutput.textContent = "// Error: " + data.error;
+                } else {
+                    parseJsonToBloxdApi(data.result);
+                }
+            } catch (error) {
+                apiOutput.textContent = "// Network Error: " + error.message;
+                jsonOutput.textContent = "// Network Error: " + error.message;
+            } finally {
+                generateBtn.disabled = false;
+            }
+        });
+
+        async function copyToClipboard(element, button) {
+            const text = element.textContent;
+            if (!text || text.startsWith("// Generating") || text.startsWith("// Generated") || text.startsWith("// Raw JSON") || text.startsWith("// Error")) {
+                return;
+            }
+
+            try {
+                await navigator.clipboard.writeText(text);
+                const originalText = button.textContent;
+                button.textContent = "Copied!";
+                setTimeout(() => {
+                    button.textContent = originalText;
+                }, 2000);
+            } catch (err) {
+                alert("Failed to copy text: " + err);
+            }
+        }
+
+        copyCodeBtn.addEventListener('click', () => copyToClipboard(apiOutput, copyCodeBtn));
+        copyJsonBtn.addEventListener('click', () => copyToClipboard(jsonOutput, copyJsonBtn));
+    </script>
+
+</body>
+
+</html>
