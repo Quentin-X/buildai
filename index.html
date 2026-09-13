@@ -94,7 +94,7 @@
 
         // read da ai
         function parseJsonToBloxdApi(rawJson) {
-    if (!rawJson || (typeof rawJson !== 'string' && typeof rawJson !== 'object')) {
+    if (!rawJson) {
         apiOutput.textContent = "// Error: Received empty response from AI.";
         jsonOutput.textContent = "// Error: Received empty response from AI.";
         return;
@@ -103,31 +103,27 @@
     try {
         let blocksData;
 
-        // Handle case where rawJson is already a parsed object/array
-        if (typeof rawJson === 'object') {
+        if (typeof rawJson === 'object' && rawJson !== null) {
             blocksData = rawJson;
-        } else {
+        } else if (typeof rawJson === 'string') {
             let cleanJson = rawJson.trim();
             cleanJson = cleanJson.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '');
             blocksData = JSON.parse(cleanJson);
+        } else {
+            throw new Error("Invalid response data type.");
         }
 
         jsonOutput.textContent = JSON.stringify(blocksData, null, 2);
 
         if (!Array.isArray(blocksData)) {
-            if (typeof blocksData === 'object' && blocksData !== null) {
-                if (Array.isArray(blocksData.blocks)) {
-                    blocksData = blocksData.blocks;
-                } else if (Array.isArray(blocksData.build)) {
-                    blocksData = blocksData.build;
-                } else if (Array.isArray(blocksData.data)) {
-                    blocksData = blocksData.data;
-                } else {
-                    // Wrap the single object into an array
-                    blocksData = [blocksData];
-                }
+            if (Array.isArray(blocksData.blocks)) {
+                blocksData = blocksData.blocks;
+            } else if (Array.isArray(blocksData.build)) {
+                blocksData = blocksData.build;
+            } else if (Array.isArray(blocksData.data)) {
+                blocksData = blocksData.data;
             } else {
-                throw new Error("Expected JSON array or object of blocks.");
+                blocksData = [blocksData];
             }
         }
 
@@ -135,7 +131,7 @@
         codeLines.push(`// Paste me in a Code Block and run me!\n`);
 
         blocksData.forEach((entry) => {
-            const blockName = entry.name || entry.block || "stone";
+            const blockName = entry.name || "stone";
 
             if (entry.pos1 && entry.pos2) {
                 const p1 = `[thisPos[0] + ${entry.pos1[0]}, thisPos[1] + ${entry.pos1[1]}, thisPos[2] + ${entry.pos1[2]}]`;
@@ -163,7 +159,7 @@
 
         apiOutput.textContent = codeLines.join('\n');
     } catch (err) {
-        apiOutput.textContent = "// Error parsing JSON: " + err.message + "\n\n--- Raw Output ---\n" + (typeof rawJson === 'object' ? JSON.stringify(rawJson) : rawJson);
+        apiOutput.textContent = "// Error parsing JSON: " + err.message + "\n\n--- Raw Output ---\n" + (typeof rawJson === 'object' ? JSON.stringify(rawJson, null, 2) : rawJson);
         jsonOutput.textContent = typeof rawJson === 'object' ? JSON.stringify(rawJson, null, 2) : rawJson;
     }
 }
