@@ -115,8 +115,6 @@ function myFunction() {
 function showPage() {
   document.getElementById("loading").style.display = "none";
 }
-
-        myFunction()
 </script>
 
     <h1>Bloxd.io AI Build Generator</h1>
@@ -282,6 +280,8 @@ function showPage() {
 
         copyCodeBtn.addEventListener('click', () => copyToClipboard(apiOutput, copyCodeBtn));
         copyJsonBtn.addEventListener('click', () => copyToClipboard(jsonOutput, copyJsonBtn));
+
+        showPage()
     </script>
 
 </body>
