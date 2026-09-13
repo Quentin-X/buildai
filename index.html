@@ -50,17 +50,69 @@
         .section-header h3 {
             margin: 0;
         }
+
+        #loading {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 100%;
+  height: 100%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 1;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px); 
+}
+
+#loader {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto;
+  border: 16px solid #f3f3f3;
+  border-radius: 50%;
+  border-top: 16px solid #3498db;
+  -webkit-animation: spin 0.3s linear infinite;
+  animation: spin 0.3s linear infinite;
+}
+
+@-webkit-keyframes spin {
+  0% { -webkit-transform: rotate(0deg); }
+  100% { -webkit-transform: rotate(360deg); }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@-webkit-keyframes animatebottom {
+  from { bottom:-100px; opacity:0 } 
+  to { bottom:0px; opacity:1 }
+}
+
+@keyframes animatebottom { 
+  from{ bottom:-100px; opacity:0 } 
+  to{ bottom:0; opacity:1 }
+}
     </style>
 </head>
 
-<body>
+<body onload="myFunction()">
+
+    <div id="loading">
+<div id="loader"></div>
+<br>
+<p>Loading...</p>
+</div>
 
     <h1>Bloxd.io AI Build Generator</h1>
+    <small>By RealSlothuLT3 :D</small>
 
     <p>A Bloxd.io AI tool to build, well, builds.</p>
+    <p>~1-5 generations per minute</p>
 
     <div class="input-group">
-        <label for="userPrompt">Prompt (maximum 100 characters):</label>
+        <label for="userPrompt">Prompt (maximum 100 characters, make it clear and short):</label>
         <input type="text" id="userPrompt" maxlength="100"
             placeholder="e.g. 2 floors with plum wood planks and lighting">
     </div>
@@ -217,6 +269,18 @@
         copyCodeBtn.addEventListener('click', () => copyToClipboard(apiOutput, copyCodeBtn));
         copyJsonBtn.addEventListener('click', () => copyToClipboard(jsonOutput, copyJsonBtn));
     </script>
+
+    <script>
+var myVar;
+
+function myFunction() {
+  myVar = setTimeout(showPage, 5000);
+}
+
+function showPage() {
+  document.getElementById("loading").style.display = "none";
+}
+</script>
 
 </body>
 
