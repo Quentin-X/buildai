@@ -105,6 +105,20 @@
 <p>Loading...</p>
 </div>
 
+    <script>
+var myVar;
+
+function myFunction() {
+  myVar = setTimeout(showPage, 5000);
+}
+
+function showPage() {
+  document.getElementById("loading").style.display = "none";
+}
+
+        myFunction()
+</script>
+
     <h1>Bloxd.io AI Build Generator</h1>
     <small>By RealSlothuLT3 :D</small>
 
@@ -269,20 +283,6 @@
         copyCodeBtn.addEventListener('click', () => copyToClipboard(apiOutput, copyCodeBtn));
         copyJsonBtn.addEventListener('click', () => copyToClipboard(jsonOutput, copyJsonBtn));
     </script>
-
-    <script>
-var myVar;
-
-function myFunction() {
-  myVar = setTimeout(showPage, 5000);
-}
-
-function showPage() {
-  document.getElementById("loading").style.display = "none";
-}
-
-        myFunction()
-</script>
 
 </body>
 
