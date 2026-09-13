@@ -94,62 +94,79 @@
 
         // read da ai
         function parseJsonToBloxdApi(rawJson) {
-            if (!rawJson || typeof rawJson !== 'string') {
-                apiOutput.textContent = "// Error: Received empty response from AI.";
-                jsonOutput.textContent = "// Error: Received empty response from AI.";
-                return;
-            }
+    if (!rawJson || (typeof rawJson !== 'string' && typeof rawJson !== 'object')) {
+        apiOutput.textContent = "// Error: Received empty response from AI.";
+        jsonOutput.textContent = "// Error: Received empty response from AI.";
+        return;
+    }
 
-            try {
-                let cleanJson = rawJson.trim();
-                cleanJson = cleanJson.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '');
+    try {
+        let blocksData;
 
-                const blocksData = JSON.parse(cleanJson);
-                jsonOutput.textContent = JSON.stringify(blocksData, null, 2);
+        // Handle case where rawJson is already a parsed object/array
+        if (typeof rawJson === 'object') {
+            blocksData = rawJson;
+        } else {
+            let cleanJson = rawJson.trim();
+            cleanJson = cleanJson.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/, '');
+            blocksData = JSON.parse(cleanJson);
+        }
 
-                if (!Array.isArray(blocksData)) {
-                    throw new Error("Expected JSON array of blocks.");
+        jsonOutput.textContent = JSON.stringify(blocksData, null, 2);
+
+        if (!Array.isArray(blocksData)) {
+            if (typeof blocksData === 'object' && blocksData !== null) {
+                if (Array.isArray(blocksData.blocks)) {
+                    blocksData = blocksData.blocks;
+                } else if (Array.isArray(blocksData.build)) {
+                    blocksData = blocksData.build;
+                } else if (Array.isArray(blocksData.data)) {
+                    blocksData = blocksData.data;
+                } else {
+                    // Wrap the single object into an array
+                    blocksData = [blocksData];
                 }
-
-                let codeLines = [];
-                codeLines.push(`// Paste me in a Code Block and run me!\n`);
-
-                blocksData.forEach((entry) => {
-                    const blockName = entry.name;
-
-                    // read da ai (louder)
-                    if (entry.pos1 && entry.pos2) {
-                        const p1 = `[thisPos[0] + ${entry.pos1[0]}, thisPos[1] + ${entry.pos1[1]}, thisPos[2] + ${entry.pos1[2]}]`;
-                        const p2 = `[thisPos[0] + ${entry.pos2[0]}, thisPos[1] + ${entry.pos2[1]}, thisPos[2] + ${entry.pos2[2]}]`;
-                        codeLines.push(`api.setBlockRect(${p1}, ${p2}, "${blockName}");`);
-                    }
-
-                    else if (Array.isArray(entry.cuboids)) {
-                        entry.cuboids.forEach(c => {
-                            if (c.pos1 && c.pos2) {
-                                const p1 = `[thisPos[0] + ${c.pos1[0]}, thisPos[1] + ${c.pos1[1]}, thisPos[2] + ${c.pos1[2]}]`;
-                                const p2 = `[thisPos[0] + ${c.pos2[0]}, thisPos[1] + ${c.pos2[1]}, thisPos[2] + ${c.pos2[2]}]`;
-                                codeLines.push(`api.setBlockRect(${p1}, ${p2}, "${blockName}");`);
-                            }
-                        });
-                    }
-
-                    else if (Array.isArray(entry.pos)) {
-                        entry.pos.forEach(pos => {
-                            const x = `thisPos[0] + ${pos[0]}`;
-                            const y = `thisPos[1] + ${pos[1]}`;
-                            const z = `thisPos[2] + ${pos[2]}`;
-                            codeLines.push(`api.setBlock(${x}, ${y}, ${z}, "${blockName}");`);
-                        });
-                    }
-                });
-
-                apiOutput.textContent = codeLines.join('\n');
-            } catch (err) {
-                apiOutput.textContent = "// Error parsing JSON, limit might be reached, try again later: " + err.message + "\n\n--- Raw Output ---\n" + rawJson;
-                jsonOutput.textContent = rawJson;
+            } else {
+                throw new Error("Expected JSON array or object of blocks.");
             }
         }
+
+        let codeLines = [];
+        codeLines.push(`// Paste me in a Code Block and run me!\n`);
+
+        blocksData.forEach((entry) => {
+            const blockName = entry.name || entry.block || "stone";
+
+            if (entry.pos1 && entry.pos2) {
+                const p1 = `[thisPos[0] + ${entry.pos1[0]}, thisPos[1] + ${entry.pos1[1]}, thisPos[2] + ${entry.pos1[2]}]`;
+                const p2 = `[thisPos[0] + ${entry.pos2[0]}, thisPos[1] + ${entry.pos2[1]}, thisPos[2] + ${entry.pos2[2]}]`;
+                codeLines.push(`api.setBlockRect(${p1}, ${p2}, "${blockName}");`);
+            }
+            else if (Array.isArray(entry.cuboids)) {
+                entry.cuboids.forEach(c => {
+                    if (c.pos1 && c.pos2) {
+                        const p1 = `[thisPos[0] + ${c.pos1[0]}, thisPos[1] + ${c.pos1[1]}, thisPos[2] + ${c.pos1[2]}]`;
+                        const p2 = `[thisPos[0] + ${c.pos2[0]}, thisPos[1] + ${c.pos2[1]}, thisPos[2] + ${c.pos2[2]}]`;
+                        codeLines.push(`api.setBlockRect(${p1}, ${p2}, "${blockName}");`);
+                    }
+                });
+            }
+            else if (Array.isArray(entry.pos)) {
+                entry.pos.forEach(pos => {
+                    const x = `thisPos[0] + ${pos[0]}`;
+                    const y = `thisPos[1] + ${pos[1]}`;
+                    const z = `thisPos[2] + ${pos[2]}`;
+                    codeLines.push(`api.setBlock(${x}, ${y}, ${z}, "${blockName}");`);
+                });
+            }
+        });
+
+        apiOutput.textContent = codeLines.join('\n');
+    } catch (err) {
+        apiOutput.textContent = "// Error parsing JSON: " + err.message + "\n\n--- Raw Output ---\n" + (typeof rawJson === 'object' ? JSON.stringify(rawJson) : rawJson);
+        jsonOutput.textContent = typeof rawJson === 'object' ? JSON.stringify(rawJson, null, 2) : rawJson;
+    }
+}
 
         // send prompt to sla- i mean worker for the build to be generated (so u can't steal hehehe)
         generateBtn.addEventListener('click', async () => {
